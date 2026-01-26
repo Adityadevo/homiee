@@ -9,6 +9,7 @@ import listingRoutes from "./routes/listings.js";
 import requestRoutes from "./routes/requests.js";
 import userRoutes from "./routes/users.js";
 import chatRoutes from "./routes/chat.js";
+import uploadRoutes from "./routes/upload.js";
 import { initializeSocket } from "./socket.js";
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use("/api/listings", listingRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

@@ -7,6 +7,9 @@ const userSchema = new mongoose.Schema(
     gender: String,
     jobType: String,
     city: String,
+    area: String,
+    contactNumber: String,
+    profilePicture: String, // URL to profile picture
     role: {
       type: String,
       enum: ["find", "provide"], // find = wants, provide = has
@@ -16,7 +19,8 @@ const userSchema = new mongoose.Schema(
     budget: Number,
     genderPref: String,
     email: { type: String, unique: true },
-    passwordHash: String
+    passwordHash: String,
+    bio: String
   },
   { timestamps: true }
 );

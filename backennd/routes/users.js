@@ -6,6 +6,45 @@ import { authRequired } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// PUT /api/users/me - Update user profile
+router.put("/me", authRequired, async (req, res) => {
+  try {
+    const { 
+      name, 
+      age, 
+      gender, 
+      jobType, 
+      city, 
+      area,
+      contactNumber, 
+      profilePicture, 
+      bio,
+      genderPref
+    } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { 
+        name, 
+        age, 
+        gender, 
+        jobType, 
+        city, 
+        area,
+        contactNumber, 
+        profilePicture, 
+        bio,
+        genderPref
+      },
+      { new: true, runValidators: true }
+    ).select("-passwordHash");
+    
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // DELETE /api/users/me/listings/:id - Delete own listing
 router.delete("/me/listings/:id", authRequired, async (req, res) => {
   try {

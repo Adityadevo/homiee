@@ -1,319 +1,532 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import Link from "next/link";
-
-type ListingType = "owner" | "buyer";
-type PropertyType = "room" | "flat";
+import { useCurrentUser } from "@/lib/useCurrentUser";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function CreateListingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const { user, loading } = useCurrentUser();
   
-  // Form state
-  const [listingType, setListingType] = useState<ListingType | null>(null);
-  const [propertyType, setPropertyType] = useState<PropertyType | null>(null);
-  const [rent, setRent] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [genderPref, setGenderPref] = useState("any");
+  const [formData, setFormData] = useState({
+    listingType: "owner" as "owner" | "buyer",
+    accommodationType: "room" as "room" | "whole-property",
+    propertyType: "apartment",
+    rent: "",
+    address: "",
+    location: "",
+    area: "",
+    description: "",
+    genderPref: "any",
+    furnishing: "",
+    availableFrom: "",
+    moveInDate: "",
+    occupationType: [] as string[],
+    contactNumber: "",
+    dietaryPreference: [] as string[],
+    amenities: [] as string[],
+    numberOfPeople: "1"
+  });
   
-  // Owner specific
-  const [furnishing, setFurnishing] = useState("");
-  const [availableFrom, setAvailableFrom] = useState("");
-  
-  // Buyer specific
-  const [moveInDate, setMoveInDate] = useState("");
-  const [occupationType, setOccupationType] = useState("");
-  
+  const [images, setImages] = useState<string[]>([]);
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!listingType || !propertyType) return;
-    
+  // Auto-fill user data when component loads
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        contactNumber: (user as any).contactNumber || "",
+        location: user.city || "",
+        area: (user as any).area || ""
+      }));
+    }
+  }, [user]);
+
+  const toggleArrayField = (field: "occupationType" | "dietaryPreference" | "amenities", value: string) => {
+    setFormData(prev => {
+      const currentArray = prev[field];
+      if (currentArray.includes(value)) {
+        return { ...prev, [field]: currentArray.filter(v => v !== value) };
+      } else {
+        return { ...prev, [field]: [...currentArray, value] };
+      }
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validation based on listing type
+    if (formData.listingType === "owner") {
+      if (!formData.address || !formData.rent || !formData.availableFrom) {
+        setError("Please fill all required fields");
+        return;
+      }
+    } else {
+      if (!formData.rent || !formData.moveInDate || !formData.area || !formData.location) {
+        setError("Please fill all required fields (Budget, Move-in Date, Area, City)");
+        return;
+      }
+    }
+
     setSubmitting(true);
+
     try {
       const payload: any = {
-        listingType,
-        propertyType,
-        rent: rent ? Number(rent) : 0,
-        location,
-        description,
-        genderPref,
+        listingType: formData.listingType,
+        accommodationType: formData.accommodationType,
+        propertyType: formData.propertyType,
+        rent: Number(formData.rent),
+        location: formData.location,
+        area: formData.area,
+        description: formData.description,
+        contactNumber: formData.contactNumber,
+        images
       };
 
-      if (listingType === "owner") {
-        payload.furnishing = furnishing;
-        payload.availableFrom = availableFrom;
+      // Owner-specific fields
+      if (formData.listingType === "owner") {
+        payload.address = formData.address;
+        payload.availableFrom = new Date(formData.availableFrom);
+        payload.dietaryPreference = formData.dietaryPreference.length > 0 ? formData.dietaryPreference : ["any"];
+        payload.occupationType = formData.occupationType.length > 0 ? formData.occupationType : ["any"];
+        payload.amenities = formData.amenities;
+        payload.genderPref = formData.genderPref;
+        payload.furnishing = formData.furnishing;
       } else {
-        payload.moveInDate = moveInDate;
-        payload.occupationType = occupationType;
+        // Buyer-specific fields
+        payload.moveInDate = new Date(formData.moveInDate);
+        payload.numberOfPeople = formData.numberOfPeople;
+        // For buyers, we don't need address validation
+        payload.address = `Looking in ${formData.area}, ${formData.location}`;
+        payload.availableFrom = new Date(formData.moveInDate);
       }
-
+      
       await apiFetch("/listings", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
-      router.push("/profile");
-    } catch (err) {
-      console.error("Failed to create listing:", err);
-      alert("Failed to create listing");
+      alert("Listing created successfully!");
+      router.push("/home");
+    } catch (err: any) {
+      setError(err.message || "Failed to create listing");
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-xl animate-pulse text-gray-700">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-purple-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
-        <Link href="/profile" className="text-gray-600 hover:text-gray-900 mb-6 inline-block">
-          ← Back
-        </Link>
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+            Create New Listing
+          </h1>
 
-        {/* Step 1: Choose Listing Type */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-black mb-2 text-gray-800">Create Listing</h1>
-              <p className="text-gray-600">What do you want to do?</p>
+          {error && (
+            <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl mb-4">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Listing Type */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                I am a *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, listingType: "owner"})}
+                  className={`py-3 rounded-xl font-bold transition-all ${
+                    formData.listingType === "owner"
+                      ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🏠 I Have a Place
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, listingType: "buyer"})}
+                  className={`py-3 rounded-xl font-bold transition-all ${
+                    formData.listingType === "buyer"
+                      ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🔍 I Need a Place
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={() => {
-                setListingType("owner");
-                setStep(2);
-              }}
-              className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl p-8 text-left hover:shadow-xl hover:-translate-y-1 transition-all shadow-md"
-            >
-              <div className="text-5xl mb-3">🏠</div>
-              <h2 className="text-2xl font-bold mb-2">I Have a Place</h2>
-              <p className="text-white/90">
-                I have a room or flat to rent out
-              </p>
-            </button>
-
-            <button
-              onClick={() => {
-                setListingType("buyer");
-                setStep(2);
-              }}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl p-8 text-left hover:shadow-xl hover:-translate-y-1 transition-all shadow-md"
-            >
-              <div className="text-5xl mb-3">🔍</div>
-              <h2 className="text-2xl font-bold mb-2">I Need a Place</h2>
-              <p className="text-white/90">
-                I'm looking for a room or flat to rent
-              </p>
-            </button>
-          </div>
-        )}
-
-        {/* Step 2: Choose Property Type */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <button
-              onClick={() => setStep(1)}
-              className="text-gray-600 hover:text-gray-900 mb-4"
-            >
-              ← Back
-            </button>
-
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-black mb-2 text-gray-800">Property Type</h1>
-              <p className="text-gray-600">
-                {listingType === "owner" 
-                  ? "What do you have?" 
-                  : "What are you looking for?"}
-              </p>
+            {/* Accommodation Type */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Accommodation Type *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, accommodationType: "room"})}
+                  className={`py-3 rounded-xl font-bold transition-all ${
+                    formData.accommodationType === "room"
+                      ? "bg-purple-500 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🚪 Room
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, accommodationType: "whole-property"})}
+                  className={`py-3 rounded-xl font-bold transition-all ${
+                    formData.accommodationType === "whole-property"
+                      ? "bg-purple-500 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🏢 Whole Property
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={() => {
-                setPropertyType("room");
-                setStep(3);
-              }}
-              className="w-full bg-white hover:bg-gray-50 rounded-2xl p-6 text-left border-2 border-gray-300 hover:border-pink-500 transition-all shadow-md"
-            >
-              <div className="text-4xl mb-2">🚪</div>
-              <h2 className="text-xl font-bold text-gray-800">Room</h2>
-              <p className="text-gray-600 text-sm">Single room in shared space</p>
-            </button>
+            {/* Property Type */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Property Type *
+              </label>
+              <select
+                value={formData.propertyType}
+                onChange={(e) => setFormData({...formData, propertyType: e.target.value})}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                required
+              >
+                <option value="apartment">Apartment</option>
+                <option value="condo">Condo</option>
+                <option value="house">House</option>
+                <option value="townhouse">Townhouse</option>
+                <option value="basement">Basement</option>
+                <option value="loft">Loft</option>
+                <option value="studio">Studio</option>
+                <option value="trailer">Trailer</option>
+              </select>
+            </div>
 
-            <button
-              onClick={() => {
-                setPropertyType("flat");
-                setStep(3);
-              }}
-              className="w-full bg-white hover:bg-gray-50 rounded-2xl p-6 text-left border-2 border-gray-300 hover:border-pink-500 transition-all shadow-md"
-            >
-              <div className="text-4xl mb-2">🏢</div>
-              <h2 className="text-xl font-bold text-gray-800">Flat</h2>
-              <p className="text-gray-600 text-sm">Complete apartment/flat</p>
-            </button>
-          </div>
-        )}
-
-        {/* Step 3: Details Form */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <button
-              onClick={() => setStep(2)}
-              className="text-gray-600 hover:text-gray-900 mb-4"
-            >
-              ← Back
-            </button>
-
-            <div className="bg-white rounded-2xl p-6 space-y-5 shadow-lg border border-gray-200">
-              <div className="text-center mb-6">
-                <h1 className="text-3xl font-black mb-2 text-gray-800">
-                  {listingType === "owner" ? "🏠 Owner" : "🔍 Buyer"} Details
-                </h1>
-                <p className="text-gray-600 text-sm">
-                  {propertyType === "room" ? "Room" : "Flat"} listing
-                </p>
-              </div>
-
-              {/* Rent */}
+            {/* Address - Only for owners */}
+            {formData.listingType === "owner" && (
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-700">
-                  {listingType === "owner" ? "Monthly Rent" : "Budget"} (₹)
-                </label>
-                <input
-                  type="number"
-                  value={rent}
-                  onChange={(e) => setRent(e.target.value)}
-                  placeholder="e.g., 8000"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                />
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-bold mb-2 text-gray-700">
-                  Location
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Full Address *
                 </label>
                 <input
                   type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., Koramangala, Bangalore"
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
+                  value={formData.address}
+                  onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  required={formData.listingType === "owner"}
+                  placeholder="Enter complete address"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
                 />
               </div>
+            )}
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-bold mb-2 text-gray-700">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={
-                    listingType === "owner"
-                      ? "Describe your property..."
-                      : "Describe what you're looking for..."
-                  }
-                  rows={4}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none resize-none text-gray-800"
-                />
-              </div>
-
-              {/* Gender Preference */}
-              <div>
-                <label className="block text-sm font-bold mb-2 text-gray-700">
-                  Gender Preference
-                </label>
-                <select
-                  value={genderPref}
-                  onChange={(e) => setGenderPref(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                >
-                  <option value="any">Any</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
-
-              {/* Owner Specific Fields */}
-              {listingType === "owner" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">
-                      Furnishing
-                    </label>
-                    <select
-                      value={furnishing}
-                      onChange={(e) => setFurnishing(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                    >
-                      <option value="">Select...</option>
-                      <option value="furnished">Furnished</option>
-                      <option value="semi-furnished">Semi-Furnished</option>
-                      <option value="unfurnished">Unfurnished</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">
-                      Available From
-                    </label>
-                    <input
-                      type="date"
-                      value={availableFrom}
-                      onChange={(e) => setAvailableFrom(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Buyer Specific Fields */}
-              {listingType === "buyer" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">
-                      Move In Date
-                    </label>
-                    <input
-                      type="date"
-                      value={moveInDate}
-                      onChange={(e) => setMoveInDate(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold mb-2 text-gray-700">
-                      Occupation Type
-                    </label>
-                    <select
-                      value={occupationType}
-                      onChange={(e) => setOccupationType(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 focus:border-pink-500 focus:outline-none text-gray-800"
-                    >
-                      <option value="">Select...</option>
-                      <option value="single">Single (alone)</option>
-                      <option value="shared">Shared (with roommates)</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || !location || !description}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {submitting ? "Creating..." : "Create Listing"}
-              </button>
+            {/* Rent/Budget */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                {formData.listingType === "owner" ? "Rent (₹/month) *" : "Budget (₹/month) *"}
+              </label>
+              <input
+                type="number"
+                value={formData.rent}
+                onChange={(e) => setFormData({...formData, rent: e.target.value})}
+                required
+                placeholder="e.g., 15000"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none text-lg"
+              />
             </div>
-          </div>
-        )}
+
+            {/* Location & Area */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  {formData.listingType === "owner" ? "City *" : "Preferred City *"}
+                </label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  required
+                  placeholder="e.g., Mumbai"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  {formData.listingType === "owner" ? "Area/Locality" : "Preferred Area *"}
+                </label>
+                <input
+                  type="text"
+                  value={formData.area}
+                  onChange={(e) => setFormData({...formData, area: e.target.value})}
+                  required={formData.listingType === "buyer"}
+                  placeholder="e.g., Andheri West, Bandra, etc."
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Available From / Move-in Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  {formData.listingType === "owner" ? "Available From *" : "Move-in Date *"}
+                </label>
+                <input
+                  type="date"
+                  value={formData.listingType === "owner" ? formData.availableFrom : formData.moveInDate}
+                  onChange={(e) => setFormData({
+                    ...formData, 
+                    [formData.listingType === "owner" ? "availableFrom" : "moveInDate"]: e.target.value
+                  })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+              
+              {/* Number of People - Only for buyers */}
+              {formData.listingType === "buyer" && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Number of People *
+                  </label>
+                  <select
+                    value={formData.numberOfPeople}
+                    onChange={(e) => setFormData({...formData, numberOfPeople: e.target.value})}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="1">1 Person</option>
+                    <option value="2">2 People</option>
+                    <option value="3">3 People</option>
+                    <option value="4">4 People</option>
+                    <option value="5+">5+ People</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                {formData.listingType === "owner" 
+                  ? "Property Description *" 
+                  : "About You / Requirements *"}
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                required
+                rows={5}
+                placeholder={formData.listingType === "owner"
+                  ? "Describe the property, amenities, nearby facilities, etc."
+                  : "Tell about yourself, your work/study, lifestyle, and any specific requirements..."}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none resize-none"
+              />
+            </div>
+
+            {/* Contact Number */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Contact Number *
+              </label>
+              <input
+                type="tel"
+                value={formData.contactNumber}
+                onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                required
+                placeholder="e.g., +91 9876543210"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                ✏️ You can edit this for each listing
+              </p>
+            </div>
+
+            {/* Owner-specific fields */}
+            {formData.listingType === "owner" && (
+              <>
+                {/* Occupation Type */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Looking For (Occupation)
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { value: "working", label: "Working Professional" },
+                      { value: "student", label: "Student" },
+                      { value: "any", label: "Any" }
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-xl cursor-pointer transition-all ${
+                          formData.occupationType.includes(option.value)
+                            ? "bg-purple-50 border-purple-500 text-purple-700"
+                            : "border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.occupationType.includes(option.value)}
+                          onChange={() => toggleArrayField("occupationType", option.value)}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                        <span className="text-sm font-medium">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dietary Preference */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Dietary Preference
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { value: "veg", label: "Vegetarian" },
+                      { value: "non-veg", label: "Non-Vegetarian" },
+                      { value: "any", label: "Any" }
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-xl cursor-pointer transition-all ${
+                          formData.dietaryPreference.includes(option.value)
+                            ? "bg-purple-50 border-purple-500 text-purple-700"
+                            : "border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.dietaryPreference.includes(option.value)}
+                          onChange={() => toggleArrayField("dietaryPreference", option.value)}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                        <span className="text-sm font-medium">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amenities */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Amenities
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {["Parking", "Gym", "Swimming Pool", "Security", "Power Backup", "Elevator", 
+                      "WiFi", "Air Conditioning", "Furnished", "Laundry", "Balcony", "Garden"].map((amenity) => (
+                      <label
+                        key={amenity}
+                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer transition-all ${
+                          formData.amenities.includes(amenity)
+                            ? "bg-purple-50 border-purple-500 text-purple-700"
+                            : "border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.amenities.includes(amenity)}
+                          onChange={() => toggleArrayField("amenities", amenity)}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                        <span className="text-sm">{amenity}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Gender Preference */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Gender Preference
+                  </label>
+                  <select
+                    value={formData.genderPref}
+                    onChange={(e) => setFormData({...formData, genderPref: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="any">Any</option>
+                    <option value="male">Male Only</option>
+                    <option value="female">Female Only</option>
+                  </select>
+                </div>
+
+                {/* Furnishing */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Furnishing
+                  </label>
+                  <select
+                    value={formData.furnishing}
+                    onChange={(e) => setFormData({...formData, furnishing: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="">Select</option>
+                    <option value="furnished">Fully Furnished</option>
+                    <option value="semi-furnished">Semi Furnished</option>
+                    <option value="unfurnished">Unfurnished</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* Image Upload - Only for owners */}
+            {formData.listingType === "owner" && (
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Property Images
+                </label>
+                <ImageUpload 
+                  images={images} 
+                  onImagesChange={setImages}
+                  maxImages={10}
+                />
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Creating..." : "🚀 Create Listing"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

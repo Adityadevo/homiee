@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
+import { useRouter } from "next/navigation";
+import { User, Briefcase, MapPin, Phone, MessageCircle, Eye } from "lucide-react";
 
 type RequestItem = {
   _id: string;
@@ -10,40 +12,89 @@ type RequestItem = {
   createdAt: string;
   listing: { 
     _id: string; 
-    location?: string; 
+    address?: string;
     rent?: number;
     propertyType?: string;
-    listingType?: string;
+    accommodationType?: string;
     description?: string;
+    images?: string[];
+    listingType?: "owner" | "buyer";
   };
-  sender?: { name?: string; city?: string; age?: number; gender?: string };
-  receiver?: { name?: string; city?: string; age?: number; gender?: string };
+  sender?: { 
+    _id: string;
+    name?: string; 
+    city?: string; 
+    age?: number; 
+    gender?: string;
+    jobType?: string;
+    profilePicture?: string;
+    area?: string;
+    bio?: string;
+    contactNumber?: string;
+  };
+  receiver?: { 
+    _id: string;
+    name?: string; 
+    city?: string; 
+    age?: number; 
+    gender?: string;
+    contactNumber?: string;
+  };
+  // Profile snapshot
+  senderProfile?: {
+    name?: string;
+    age?: number;
+    gender?: string;
+    jobType?: string;
+    city?: string;
+    area?: string;
+    profilePicture?: string;
+    bio?: string;
+  };
 };
 
 export default function RequestsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"incoming" | "sent">("incoming");
   const [incoming, setIncoming] = useState<RequestItem[]>([]);
   const [sent, setSent] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch<RequestItem[]>("/requests/incoming"),
-      apiFetch<RequestItem[]>("/requests/sent")
-    ]).then(([inc, snt]) => {
-      setIncoming(inc);
-      setSent(snt);
-    }).finally(() => setLoading(false));
+    loadRequests();
   }, []);
 
+  async function loadRequests() {
+    try {
+      const [inc, snt] = await Promise.all([
+        apiFetch<RequestItem[]>("/requests/incoming"),
+        apiFetch<RequestItem[]>("/requests/sent")
+      ]);
+      setIncoming(inc);
+      setSent(snt);
+    } catch (error) {
+      console.error("Failed to load requests:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function updateStatus(id: string, status: "accepted" | "rejected") {
-    await apiFetch(`/requests/${id}/status`, {
-      method: "POST",
-      body: JSON.stringify({ status })
-    });
-    setIncoming((items) =>
-      items.map((it) => (it._id === id ? { ...it, status } : it))
-    );
+    try {
+      await apiFetch(`/requests/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status })
+      });
+      
+      // Reload requests to get updated contact info
+      loadRequests();
+
+      if (status === "accepted") {
+        alert("✅ Request accepted! You can now see their contact number and start chatting.");
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to update request");
+    }
   }
 
   const list = tab === "incoming" ? incoming : sent;
@@ -57,26 +108,26 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-purple-50 px-4 py-8 pb-24">
-      <div className="mx-auto max-w-md space-y-6">
-        <h1 className="text-3xl font-bold text-center text-gray-800">Requests</h1>
+    <div className="min-h-screen bg-gray-50 px-4 py-8 pb-24">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900">Requests</h1>
         
-        <div className="flex rounded-xl bg-white p-1 shadow-md border border-gray-200">
+        <div className="flex rounded-lg bg-white p-1 shadow-sm border border-gray-200">
           <button
-            className={`flex-1 rounded-lg py-2 text-sm font-bold transition-all ${
+            className={`flex-1 rounded-lg py-3 text-sm font-semibold transition-all ${
               tab === "incoming" 
-                ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white" 
-                : "text-gray-600"
+                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
             onClick={() => setTab("incoming")}
           >
             Incoming ({incoming.length})
           </button>
           <button
-            className={`flex-1 rounded-lg py-2 text-sm font-bold transition-all ${
+            className={`flex-1 rounded-lg py-3 text-sm font-semibold transition-all ${
               tab === "sent" 
-                ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white" 
-                : "text-gray-600"
+                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
             onClick={() => setTab("sent")}
           >
@@ -85,79 +136,215 @@ export default function RequestsPage() {
         </div>
 
         <div className="space-y-4">
-          {list.map((r) => (
-            <div
-              key={r._id}
-              className="rounded-2xl bg-white p-5 shadow-md border border-gray-200"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="font-bold text-xl text-gray-800 mb-1">
-                    ₹{r.listing?.rent}/month
-                  </div>
-                  <div className="text-sm text-gray-600 mb-2">
-                    📍 {r.listing?.location}
-                  </div>
-                  {r.listing?.propertyType && (
-                    <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-bold border border-purple-300">
-                      {r.listing.propertyType} • {r.listing.listingType}
+          {list.map((r) => {
+            const profileData = tab === "incoming" && r.senderProfile ? r.senderProfile : r.sender;
+            const contactNumber = tab === "incoming" ? r.sender?.contactNumber : r.receiver?.contactNumber;
+            const isOwnerListing = r.listing?.listingType === "owner";
+
+            return (
+              <div
+                key={r._id}
+                className="rounded-lg bg-white shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <div className="p-6">
+                  {/* Status and Date Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`px-3 py-1 text-xs uppercase font-semibold rounded-full ${
+                      r.status === "accepted" 
+                        ? "bg-green-100 text-green-700"
+                        : r.status === "rejected"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}>
+                      {r.status}
                     </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(r.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {/* Clear Section Labels */}
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      {tab === "incoming" ? "👤 Request From:" : "👤 Request To:"}
+                    </h3>
+                  </div>
+
+                  {/* Profile Section */}
+                  {profileData && (
+                    <div className="mb-6 pb-6 border-b border-gray-200">
+                      <div className="flex items-start gap-4">
+                        {/* Profile Picture */}
+                        <div className="flex-shrink-0">
+                          {profileData.profilePicture ? (
+                            <img
+                              src={profileData.profilePicture}
+                              alt={profileData.name || "User"}
+                              className="w-20 h-20 rounded-full object-cover border-2 border-purple-200"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+                              {profileData.name?.[0]?.toUpperCase() || "?"}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Profile Info */}
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            {profileData.name || "Unknown"}
+                          </h3>
+                          
+                          <div className="space-y-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>
+                                {profileData.age && `${profileData.age} years`}
+                                {profileData.gender && ` • ${profileData.gender}`}
+                              </span>
+                            </div>
+                            
+                            {profileData.jobType && (
+                              <div className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4" />
+                                <span className="capitalize">{profileData.jobType}</span>
+                              </div>
+                            )}
+                            
+                            {(profileData.city || profileData.area) && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>
+                                  {profileData.area && `${profileData.area}, `}
+                                  {profileData.city}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Contact Number - Only shown for accepted requests */}
+                            {r.status === "accepted" && contactNumber && (
+                              <div className="flex items-center gap-2 text-purple-600 font-semibold mt-3 bg-purple-50 px-3 py-2 rounded-lg">
+                                <Phone className="h-4 w-4" />
+                                <a href={`tel:${contactNumber}`} className="hover:underline">
+                                  {contactNumber}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Bio */}
+                          {profileData.bio && (
+                            <p className="mt-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg italic">
+                              "{profileData.bio}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Listing Info Label */}
+                  <div className="mb-3">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {tab === "incoming" 
+                        ? "🏠 Your Listing Details:" 
+                        : "🏠 Property They're Offering:"}
+                    </h3>
+                  </div>
+
+                  {/* Listing Info */}
+                  {r.listing && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 mb-4 border border-purple-200">
+                      <div className="flex items-start gap-3">
+                        {/* Listing Image */}
+                        {r.listing.images && r.listing.images.length > 0 && (
+                          <img
+                            src={r.listing.images[0]}
+                            alt="Property"
+                            className="w-24 h-24 rounded-lg object-cover border-2 border-white shadow-md"
+                          />
+                        )}
+                        
+                        {/* Listing Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-1 bg-purple-500 text-white text-xs rounded font-semibold capitalize">
+                              {r.listing.accommodationType === "whole-property" ? "Whole Property" : "Room"}
+                            </span>
+                            <span className="px-2 py-1 bg-gray-700 text-white text-xs rounded font-semibold capitalize">
+                              {r.listing.propertyType}
+                            </span>
+                          </div>
+                          
+                          <div className="text-xl font-bold text-gray-900 mb-1">
+                            ₹{r.listing.rent}/month
+                          </div>
+                          
+                          {r.listing.address && (
+                            <div className="flex items-start gap-1 text-sm text-gray-600 mb-2">
+                              <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <span className="line-clamp-2">{r.listing.address}</span>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => router.push(`/listing/${r.listing._id}`)}
+                            className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View Full Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  {tab === "incoming" && r.status === "pending" && (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => updateStatus(r._id, "rejected")}
+                        className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                      >
+                        ✕ Reject
+                      </button>
+                      <button
+                        onClick={() => updateStatus(r._id, "accepted")}
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                      >
+                        ✓ Accept
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Call and Chat Buttons for Accepted Requests */}
+                  {r.status === "accepted" && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      {contactNumber && (
+                        <a
+                          href={`tel:${contactNumber}`}
+                          className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                        >
+                          <Phone className="h-4 w-4" />
+                          Call
+                        </a>
+                      )}
+                      <button
+                        onClick={() => router.push(`/chat/${r._id}`)}
+                        className={`flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all ${
+                          !contactNumber ? 'col-span-2' : ''
+                        }`}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Chat
+                      </button>
+                    </div>
                   )}
                 </div>
-                <span className={`px-3 py-1 text-xs uppercase font-bold rounded-full ${
-                  r.status === "accepted" 
-                    ? "bg-green-100 text-green-700 border border-green-300"
-                    : r.status === "rejected"
-                    ? "bg-red-100 text-red-700 border border-red-300"
-                    : "bg-yellow-100 text-yellow-700 border border-yellow-300"
-                }`}>
-                  {r.status}
-                </span>
               </div>
-
-              {/* User Info */}
-              <div className="bg-gray-50 rounded-xl p-3 mb-3 border border-gray-200">
-                <div className="text-xs text-gray-600 mb-1">
-                  {tab === "incoming" ? "From" : "To"}
-                </div>
-                <div className="font-bold text-gray-800">
-                  {tab === "incoming" ? r.sender?.name : r.receiver?.name}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {tab === "incoming" 
-                    ? `${r.sender?.age ? r.sender.age + 'y' : ''} ${r.sender?.gender || ''} • ${r.sender?.city || ''}`
-                    : `${r.receiver?.age ? r.receiver.age + 'y' : ''} ${r.receiver?.gender || ''} • ${r.receiver?.city || ''}`
-                  }
-                </div>
-              </div>
-
-              {/* Description */}
-              {r.listing?.description && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  {r.listing.description}
-                </p>
-              )}
-
-              {/* Actions */}
-              {tab === "incoming" && r.status === "pending" && (
-                <div className="mt-3 flex gap-3">
-                  <button
-                    onClick={() => updateStatus(r._id, "rejected")}
-                    className="flex-1 rounded-xl bg-black text-white py-2 font-bold hover:bg-gray-900 transition-all"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => updateStatus(r._id, "accepted")}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white py-2 font-bold shadow-md hover:shadow-lg transition-all"
-                  >
-                    Accept
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
+          
           {list.length === 0 && (
             <div className="text-center py-20">
               <div className="text-6xl mb-4 opacity-30">📨</div>
@@ -168,8 +355,7 @@ export default function RequestsPage() {
           )}
         </div>
       </div>
-        <NavBar />
+      <NavBar />
     </div>
-
   );
 }

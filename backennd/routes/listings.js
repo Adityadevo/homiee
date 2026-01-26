@@ -8,36 +8,55 @@ const router = express.Router();
 // POST /api/listings
 router.post("/", authRequired, async (req, res) => {
   try {
-    const { 
-      listingType, 
-      propertyType, 
-      rent, 
-      location, 
-      description, 
-      genderPref,
-      availableFrom,
-      furnishing,
-      moveInDate,
-      occupationType
-    } = req.body;
-    
-    const listing = await Listing.create({
+    const listingData = {
       creator: req.user.id,
-      listingType,
-      propertyType,
-      rent,
-      location,
-      description,
-      genderPref,
-      availableFrom,
-      furnishing,
-      moveInDate,
-      occupationType
-    });
+      listingType: req.body.listingType,
+      
+      // Property Address
+      address: req.body.address,
+      hideStreetName: req.body.hideStreetName || false,
+      
+      // Room Details
+      accommodationType: req.body.accommodationType,
+      propertyType: req.body.propertyType,
+      
+      // Financial Details
+      rent: req.body.rent,
+      securityDeposit: req.body.securityDeposit || 0,
+      availableFrom: req.body.availableFrom,
+      billsIncluded: req.body.billsIncluded || false,
+      
+      // Bills Breakdown
+      billsBreakdown: req.body.billsBreakdown,
+      
+      // Additional Charges
+      additionalCharges: req.body.additionalCharges,
+      
+      // Tenant Preferences
+      dietaryPreference: req.body.dietaryPreference || ["any"],
+      occupationType: req.body.occupationType || ["any"],
+      amenities: req.body.amenities || [],
+      
+      // Media
+      images: req.body.images || [],
+      videos: req.body.videos || [],
+      
+      // Legacy fields for backward compatibility
+      location: req.body.location || req.body.address,
+      area: req.body.area,
+      description: req.body.description,
+      genderPref: req.body.genderPref,
+      contactNumber: req.body.contactNumber,
+      furnishing: req.body.furnishing,
+      moveInDate: req.body.moveInDate,
+      active: true
+    };
+
+    const listing = await Listing.create(listingData);
     res.json(listing);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to create listing" });
+    console.error("Listing creation error:", err);
+    res.status(500).json({ message: err.message || "Failed to create listing" });
   }
 });
 
@@ -55,7 +74,7 @@ router.get("/feed", authRequired, async (req, res) => {
       listingType: showListingType,
       active: true 
     })
-    .populate("creator", "name city age gender")
+    .populate("creator", "name city area age gender profilePicture contactNumber")
     .sort({ createdAt: -1 })
     .limit(50);
 
@@ -90,7 +109,7 @@ router.get("/my", authRequired, async (req, res) => {
 // GET /api/listings/:id
 router.get("/:id", async (req, res) => {
   try {
-    const listing = await Listing.findById(req.params.id).populate("creator", "name city age gender");
+    const listing = await Listing.findById(req.params.id).populate("creator", "name city age gender profilePicture");
     if (!listing) return res.status(404).json({ message: "Not found" });
     res.json(listing);
   } catch (err) {

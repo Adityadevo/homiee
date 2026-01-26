@@ -20,8 +20,8 @@ type Message = {
 
 type MatchData = {
   _id: string;
-  sender: { _id: string; name: string; email: string };
-  receiver: { _id: string; name: string; email: string };
+  sender: { _id: string; name: string; email: string; profilePicture?: string };
+  receiver: { _id: string; name: string; email: string; profilePicture?: string };
   listing: { 
     _id: string;
     rent?: number;
@@ -60,29 +60,38 @@ export default function ChatPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Get match details
-        const matches = await apiFetch<MatchData[]>("/requests/matches");
-        const match = matches.find((m) => m._id === matchId);
+        // Get request details directly
+        const request = await apiFetch<any>(`/requests/${matchId}`);
         
-        if (!match) {
+        if (!request) {
+          console.error("Request not found");
           router.push("/matches");
           return;
         }
         
-        setMatchData(match);
+        // Convert request to match data format
+        const otherUser = request.sender._id === user?._id ? request.receiver : request.sender;
+        
+        setMatchData({
+          _id: request._id,
+          sender: request.sender,
+          receiver: request.receiver,
+          listing: request.listing
+        });
         
         // Get chat history
         const history = await apiFetch<Message[]>(`/chat/${matchId}`);
         setMessages(history);
       } catch (error) {
         console.error("Failed to load chat data:", error);
+        router.push("/matches");
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [matchId, router]);
+  }, [matchId, router, user]);
 
   // Socket connection
   useEffect(() => {
@@ -199,9 +208,17 @@ export default function ChatPage() {
         >
           ←
         </button>
-        <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-          {otherUser.name[0].toUpperCase()}
-        </div>
+        {otherUser.profilePicture ? (
+          <img 
+            src={otherUser.profilePicture}
+            alt={otherUser.name}
+            className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+          />
+        ) : (
+          <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+            {otherUser.name[0].toUpperCase()}
+          </div>
+        )}
         <div className="flex-1">
           <div className="font-bold text-gray-800">{otherUser.name}</div>
           <div className="text-xs text-gray-500">
