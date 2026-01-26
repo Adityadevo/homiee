@@ -4,6 +4,8 @@ import { FormEvent, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
+export const dynamic = 'force-dynamic';
+
 function ListingForm() {
   const params = useSearchParams();
   const type = (params.get("type") as "room" | "flat") || "room";
