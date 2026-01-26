@@ -1,5 +1,6 @@
 // backend/index.js
 import express from "express";
+import { createServer } from "http";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "./db.js";
@@ -7,6 +8,8 @@ import authRoutes from "./routes/auth.js";
 import listingRoutes from "./routes/listings.js";
 import requestRoutes from "./routes/requests.js";
 import userRoutes from "./routes/users.js";
+import chatRoutes from "./routes/chat.js";
+import { initializeSocket } from "./socket.js";
 
 dotenv.config();
 
@@ -24,6 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -42,7 +46,13 @@ app.use((error, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+// Create HTTP server and initialize Socket.io
+const httpServer = createServer(app);
+initializeSocket(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`💬 Socket.io initialized`);
 });
