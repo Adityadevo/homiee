@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
-export default function ListingFormPage() {
+function ListingForm() {
   const params = useSearchParams();
   const type = (params.get("type") as "room" | "flat") || "room";
 
@@ -82,5 +82,17 @@ export default function ListingFormPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ListingFormPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
+    }>
+      <ListingForm />
+    </Suspense>
   );
 }

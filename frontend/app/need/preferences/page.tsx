@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
-export default function NeedPreferencesPage() {
+function PreferencesForm() {
   const params = useSearchParams();
   const type = (params.get("type") as "room" | "flat") || "room";
 
@@ -37,5 +37,17 @@ export default function NeedPreferencesPage() {
         <button className="w-full bg-indigo-500 p-3 rounded font-bold">Post → Home</button>
       </form>
     </div>
+  );
+}
+
+export default function NeedPreferencesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen pt-20 pb-24 flex items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
+    }>
+      <PreferencesForm />
+    </Suspense>
   );
 }
