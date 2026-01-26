@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { UploadCloud } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 interface ProfilePictureUploadProps {
   currentImage?: string;
   onImageChange: (url: string) => void;
@@ -25,7 +27,7 @@ export default function ProfilePictureUpload({ currentImage, onImageChange }: Pr
       reader.onload = async () => {
         try {
           const token = localStorage.getItem("rommie_token");
-          const res = await fetch("http://localhost:5000/api/upload/image", {
+          const res = await fetch(`${API_URL}/api/upload/image`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

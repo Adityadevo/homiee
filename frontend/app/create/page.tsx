@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/ImageUpload";
 import { Plus, Trash2 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 interface CustomCharge {
   name: string;
   amount: string;
@@ -182,7 +184,7 @@ export default function CreateListing() {
         images
       };
 
-      const res = await fetch("http://localhost:5000/api/listings", {
+      const res = await fetch(`${API_URL}/api/listings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

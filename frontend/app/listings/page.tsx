@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 type Listing = {
   _id: string;
   city: string;
@@ -20,7 +22,7 @@ export default function ListingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/listings")
+    fetch(`${API_URL}/api/listings`)
       .then((res) => res.json())
       .then((data) => {
         setListings(data);

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 export default function MyListings() {
   const [data, setData] = useState<any[]>([]);
   const email = localStorage.getItem("email");
@@ -8,7 +10,7 @@ export default function MyListings() {
   useEffect(() => {
     if (!email) return;
 
-    fetch(`http://localhost:5000/api/listings/my/${email}`)
+    fetch(`${API_URL}/api/listings/my/${email}`)
       .then(res => res.json())
       .then(setData);
   }, [email]);
