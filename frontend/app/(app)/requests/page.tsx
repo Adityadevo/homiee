@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
-import { User, Briefcase, MapPin, Phone, MessageCircle, Eye } from "lucide-react";
+import { User, Briefcase, MapPin, Phone, MessageCircle, Eye, Inbox, X, Check } from "lucide-react";
 
 type RequestItem = {
   _id: string;
@@ -38,6 +38,10 @@ type RequestItem = {
     city?: string; 
     age?: number; 
     gender?: string;
+    jobType?: string;
+    profilePicture?: string;
+    area?: string;
+    bio?: string;
     contactNumber?: string;
   };
   // Profile snapshot
@@ -51,6 +55,14 @@ type RequestItem = {
     profilePicture?: string;
     bio?: string;
   };
+};
+
+type ProfileData = RequestItem["sender"] | RequestItem["senderProfile"] | RequestItem["receiver"];
+
+const getProfileImage = (profile: ProfileData) => {
+  if (!profile) return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
+  if (profile.profilePicture && profile.profilePicture.trim() !== "") return profile.profilePicture;
+  return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
 };
 
 export default function RequestsPage() {
@@ -137,7 +149,9 @@ export default function RequestsPage() {
 
         <div className="space-y-4">
           {list.map((r) => {
-            const profileData = tab === "incoming" && r.senderProfile ? r.senderProfile : r.sender;
+            const profileData = tab === "incoming" 
+              ? (r.senderProfile || r.sender) 
+              : r.receiver;
             const contactNumber = tab === "incoming" ? r.sender?.contactNumber : r.receiver?.contactNumber;
             const isOwnerListing = r.listing?.listingType === "owner";
 
@@ -165,8 +179,9 @@ export default function RequestsPage() {
 
                   {/* Clear Section Labels */}
                   <div className="mb-4">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">
-                      {tab === "incoming" ? "👤 Request From:" : "👤 Request To:"}
+                    <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                      <User className="h-5 w-5 text-purple-600" />
+                      {tab === "incoming" ? "Request From:" : "Request To:"}
                     </h3>
                   </div>
 
@@ -176,17 +191,13 @@ export default function RequestsPage() {
                       <div className="flex items-start gap-4">
                         {/* Profile Picture */}
                         <div className="flex-shrink-0">
-                          {profileData.profilePicture ? (
+                          <div className="w-20 h-20 rounded-full border-2 border-purple-200 overflow-hidden bg-white">
                             <img
-                              src={profileData.profilePicture}
-                              alt={profileData.name || "User"}
-                              className="w-20 h-20 rounded-full object-cover border-2 border-purple-200"
+                              src={getProfileImage(profileData)}
+                              alt={profileData?.name || "User"}
+                              className="w-full h-full object-cover"
                             />
-                          ) : (
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
-                              {profileData.name?.[0]?.toUpperCase() || "?"}
-                            </div>
-                          )}
+                          </div>
                         </div>
 
                         {/* Profile Info */}
@@ -245,10 +256,11 @@ export default function RequestsPage() {
 
                   {/* Listing Info Label */}
                   <div className="mb-3">
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-purple-600" />
                       {tab === "incoming" 
-                        ? "🏠 Your Listing Details:" 
-                        : "🏠 Property They're Offering:"}
+                        ? "Your Listing Details:" 
+                        : "Property They're Offering:"}
                     </h3>
                   </div>
 
@@ -304,15 +316,17 @@ export default function RequestsPage() {
                     <div className="flex gap-3">
                       <button
                         onClick={() => updateStatus(r._id, "rejected")}
-                        className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                        className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                       >
-                        ✕ Reject
+                        <X className="h-4 w-4" />
+                        Reject
                       </button>
                       <button
                         onClick={() => updateStatus(r._id, "accepted")}
-                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                       >
-                        ✓ Accept
+                        <Check className="h-4 w-4" />
+                        Accept
                       </button>
                     </div>
                   )}
@@ -347,7 +361,9 @@ export default function RequestsPage() {
           
           {list.length === 0 && (
             <div className="text-center py-20">
-              <div className="text-6xl mb-4 opacity-30">📨</div>
+              <div className="flex justify-center mb-4">
+                <Inbox className="h-24 w-24 text-gray-300" />
+              </div>
               <p className="text-gray-600 text-lg">
                 No {tab === "incoming" ? "incoming" : "sent"} requests yet
               </p>

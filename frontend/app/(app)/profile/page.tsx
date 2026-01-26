@@ -7,6 +7,7 @@ import { useCurrentUser, User } from "@/lib/useCurrentUser";
 import NavBar from "@/components/Navbar";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import Link from "next/link";
+import { Edit, Phone, MapPin, Briefcase, Save, X, FileText, Plus, LogOut } from "lucide-react";
 
 type Listing = {
   _id: string;
@@ -90,20 +91,17 @@ export default function ProfilePage() {
   };
 
   const getProfileImage = () => {
-    if (formData.profilePicture) return formData.profilePicture;
-    // Dummy icons based on gender
-    if (formData.gender === "male") return "https://i.pravatar.cc/200?img=12";
-    if (formData.gender === "female") return "https://i.pravatar.cc/200?img=47";
-    return "https://i.pravatar.cc/200?img=1";
+    if (formData.profilePicture && formData.profilePicture.trim() !== "") return formData.profilePicture;
+    return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
   };
 
-  if (loading) return <div className="min-h-screen bg-white pt-20 p-6 text-gray-700">Loading...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 pt-20 p-6 text-gray-700">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50 pt-8 pb-24 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-8 pb-24 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Profile Header */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-purple-100">
           <div className="flex items-start gap-6">
             {/* Profile Picture */}
             {editMode ? (
@@ -115,7 +113,7 @@ export default function ProfilePage() {
               <img 
                 src={getProfileImage()}
                 alt={formData.name || "Profile"}
-                className="w-32 h-32 rounded-full object-cover border-4 border-purple-200"
+                className="w-32 h-32 rounded-full object-cover border-4 border-indigo-200 shadow-lg"
               />
             )}
 
@@ -133,24 +131,32 @@ export default function ProfilePage() {
                     </div>
                     <button
                       onClick={() => setEditMode(true)}
-                      className="bg-purple-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-purple-600"
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-5 py-2.5 rounded-xl font-bold hover:shadow-lg transition-all flex items-center gap-2"
                     >
-                      ✏️ Edit
+                      <Edit className="h-4 w-4" />
+                      Edit
                     </button>
                   </div>
                   
                   {formData.contactNumber && (
-                    <p className="text-gray-700">📱 {formData.contactNumber}</p>
+                    <p className="text-gray-700 flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      {formData.contactNumber}
+                    </p>
                   )}
                   
                   {(formData.city || formData.area) && (
-                    <p className="text-gray-700">
-                      📍 {formData.area && `${formData.area}, `}{formData.city}
+                    <p className="text-gray-700 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      {formData.area && `${formData.area}, `}{formData.city}
                     </p>
                   )}
                   
                   {formData.jobType && (
-                    <p className="text-gray-700">💼 {formData.jobType}</p>
+                    <p className="text-gray-700 flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      {formData.jobType}
+                    </p>
                   )}
                   
                   {formData.bio && (
@@ -231,14 +237,16 @@ export default function ProfilePage() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleSaveProfile}
-                      className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:shadow-lg"
+                      className="flex-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
                     >
-                      💾 Save
+                      <Save className="h-4 w-4" />
+                      Save
                     </button>
                     <button
                       onClick={() => setEditMode(false)}
-                      className="px-4 py-2 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:border-gray-400"
+                      className="px-4 py-2 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
                     >
+                      <X className="h-4 w-4" />
                       Cancel
                     </button>
                   </div>
@@ -251,43 +259,44 @@ export default function ProfilePage() {
         {/* My Listings */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">My Listings ({myListings.length})</h2>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">My Listings ({myListings.length})</h2>
             <Link
               href="/create-listing"
-              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:shadow-lg"
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
             >
-              + Create
+              <Plus className="h-4 w-4" />
+              Create
             </Link>
           </div>
 
           {/* Tabs */}
-          <div className="bg-white rounded-xl p-1 flex gap-1 mb-4 shadow-md border border-gray-200">
+          <div className="bg-white rounded-xl p-1.5 flex gap-1.5 mb-4 shadow-lg border border-purple-100">
             <button
               onClick={() => setActiveTab("all")}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "all"
-                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               All ({myListings.length})
             </button>
             <button
               onClick={() => setActiveTab("owner")}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "owner"
-                  ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               My Properties ({myListings.filter(l => l.listingType === "owner").length})
             </button>
             <button
               onClick={() => setActiveTab("buyer")}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "buyer"
-                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               My Posts   ({myListings.filter(l => l.listingType === "buyer").length})
@@ -295,13 +304,16 @@ export default function ProfilePage() {
           </div>
 
           {filteredListings.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center shadow-md border border-gray-200">
-              <div className="text-4xl mb-4 opacity-30">📝</div>
-              <p className="text-gray-600 mb-4">No listings published yet</p>
+            <div className="bg-white rounded-xl p-8 text-center shadow-xl border border-purple-100">
+              <div className="flex justify-center mb-4">
+                <FileText className="h-24 w-24 text-purple-200" />
+              </div>
+              <p className="text-gray-600 mb-4 text-lg">No listings published yet</p>
               <Link
                 href="/create-listing"
-                className="inline-block bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-2 rounded-xl font-bold shadow-md hover:shadow-lg"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
               >
+                <Plus className="h-4 w-4" />
                 Create Your First Listing
               </Link>
             </div>
@@ -311,10 +323,10 @@ export default function ProfilePage() {
                 <Link
                   key={listing._id}
                   href={`/listing/${listing._id}`}
-                  className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-200 hover:border-purple-300"
+                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-purple-100 hover:border-purple-300 transform hover:-translate-y-1"
                 >
                   {/* Image */}
-                  <div className="h-40 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center overflow-hidden">
+                  <div className="h-40 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center overflow-hidden">
                     {listing.images && listing.images.length > 0 ? (
                       <img 
                         src={listing.images[0]} 
@@ -331,18 +343,21 @@ export default function ProfilePage() {
                   {/* Content */}
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-xl font-bold text-purple-600">
+                      <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         ₹{listing.rent}/mo
                       </span>
                       <span className={`px-2 py-1 text-xs rounded-full font-bold ${
                         listing.listingType === "owner"
-                          ? "bg-purple-100 text-purple-700"
+                          ? "bg-indigo-100 text-indigo-700"
                           : "bg-pink-100 text-pink-700"
                       }`}>
                         {listing.propertyType}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">📍 {listing.location}</p>
+                    <p className="text-sm text-gray-600 mb-2 flex items-start gap-1">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      {listing.location}
+                    </p>
                     <p className="text-sm text-gray-500 line-clamp-2">{listing.description}</p>
                   </div>
                 </Link>
@@ -354,9 +369,10 @@ export default function ProfilePage() {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full bg-red-500 text-white px-4 py-3 rounded-xl font-bold hover:bg-red-600"
+          className="w-full bg-gradient-to-r from-red-500 to-rose-500 text-white px-4 py-3 rounded-xl font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
-          🚪 Logout
+          <LogOut className="h-5 w-5" />
+          Logout
         </button>
       </div>
       

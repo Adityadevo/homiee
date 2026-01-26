@@ -18,7 +18,18 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3001"],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // Allow all localhost origins for development
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    // For production, you should specify exact origins
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: "10mb" }));

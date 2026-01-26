@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
 import Link from "next/link";
-import { MapPin, Phone, User, Briefcase, Heart, MessageCircle } from "lucide-react";
+import { MapPin, Phone, User, Briefcase, Heart, MessageCircle, HeartCrack } from "lucide-react";
 
 type Match = {
   matchedUser: {
@@ -41,6 +41,11 @@ type Match = {
   chatId: string; // Request ID to use for chat
 };
 
+const getProfileImage = (user: Match["matchedUser"]) => {
+  if (user.profilePicture && user.profilePicture.trim() !== "") return user.profilePicture;
+  return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
+};
+
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,13 +68,18 @@ export default function MatchesPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 pb-24">
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">💕 Your Matches</h1>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Heart className="h-8 w-8 text-pink-500 fill-pink-500" />
+            <h1 className="text-3xl font-bold text-gray-900">Your Matches</h1>
+          </div>
           <p className="text-gray-600">People who are interested in your listing and you in theirs</p>
         </div>
 
         {matches.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4 opacity-30">💔</div>
+            <div className="flex justify-center mb-4">
+              <HeartCrack className="h-24 w-24 text-gray-300" />
+            </div>
             <p className="text-gray-600 text-lg mb-2">No matches yet</p>
             <p className="text-gray-500 text-sm">
               When someone likes your listing and you like theirs, you'll see them here!
@@ -100,17 +110,13 @@ export default function MatchesPage() {
                   <div className="flex items-start gap-4 mb-6 pb-6 border-b border-gray-200">
                     {/* Profile Picture */}
                     <div className="flex-shrink-0">
-                      {match.matchedUser.profilePicture ? (
+                      <div className="w-24 h-24 rounded-full border-4 border-pink-200 overflow-hidden bg-white">
                         <img
-                          src={match.matchedUser.profilePicture}
+                          src={getProfileImage(match.matchedUser)}
                           alt={match.matchedUser.name}
-                          className="w-24 h-24 rounded-full object-cover border-4 border-pink-200"
+                          className="w-full h-full object-cover"
                         />
-                      ) : (
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-3xl font-bold border-4 border-pink-200">
-                          {match.matchedUser.name[0]?.toUpperCase()}
-                        </div>
-                      )}
+                      </div>
                     </div>
 
                     {/* Profile Info */}

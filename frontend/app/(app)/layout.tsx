@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
 import NavBar from "@/components/Navbar";
-// import NavBar from "@/components/NavBar";
 
 export default function AppLayout({
   children
@@ -15,7 +14,7 @@ export default function AppLayout({
 
   useEffect(() => {
     if (!getToken()) {
-      router.replace("/dashboard");
+      router.replace("/login");
     }
   }, [router]);
 

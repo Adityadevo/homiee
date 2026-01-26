@@ -117,4 +117,52 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// POST /api/listings/:id/like - Toggle like on a listing
+router.post("/:id/like", authRequired, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    const userId = req.user.id;
+    const likeIndex = listing.likes.indexOf(userId);
+
+    if (likeIndex > -1) {
+      // Already liked, so unlike
+      listing.likes.splice(likeIndex, 1);
+    } else {
+      // Not liked yet, so like
+      listing.likes.push(userId);
+    }
+
+    await listing.save();
+    res.json({ 
+      liked: likeIndex === -1,
+      likesCount: listing.likes.length 
+    });
+  } catch (err) {
+    console.error("Like toggle error:", err);
+    res.status(500).json({ message: "Failed to toggle like" });
+  }
+});
+
+// GET /api/listings/:id/like-status - Check if current user liked this listing
+router.get("/:id/like-status", authRequired, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id).select("likes");
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    const liked = listing.likes.includes(req.user.id);
+    res.json({ 
+      liked,
+      likesCount: listing.likes.length 
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed" });
+  }
+});
+
 export default router;

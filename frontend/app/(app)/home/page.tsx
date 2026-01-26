@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
+import { Home as HomeIcon, Users, MapPin, Plus } from "lucide-react";
 
 type Listing = {
   _id: string;
@@ -48,10 +49,8 @@ export default function HomePage() {
   }, [mode]);
 
   const getProfileImage = (creator: Listing["creator"]) => {
-    if (creator.profilePicture) return creator.profilePicture;
-    if (creator.gender === "male") return "https://i.pravatar.cc/150?img=12";
-    if (creator.gender === "female") return "https://i.pravatar.cc/150?img=47";
-    return "https://i.pravatar.cc/150?img=1";
+    if (creator.profilePicture && creator.profilePicture.trim() !== "") return creator.profilePicture;
+    return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
   };
 
   const getPropertyImage = (listing: Listing) => {
@@ -76,23 +75,25 @@ export default function HomePage() {
         <div className="bg-white rounded-2xl p-2 flex gap-2 mb-6 shadow-md border border-gray-200 max-w-xl mx-auto">
           <button
             onClick={() => setMode("buyer")}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+            className={`flex-1 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
               mode === "buyer"
                 ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
                 : "bg-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            🏠 Properties
+            <HomeIcon className="h-5 w-5" />
+            Properties
           </button>
           <button
             onClick={() => setMode("owner")}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+            className={`flex-1 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
               mode === "owner"
                 ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg"
                 : "bg-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            📋 Tenants
+            <Users className="h-5 w-5" />
+            Tenants
           </button>
         </div>
 
@@ -109,8 +110,12 @@ export default function HomePage() {
 
         {listings.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4 opacity-30">
-              {mode === "buyer" ? "🏠" : "🔍"}
+            <div className="flex justify-center mb-4">
+              {mode === "buyer" ? (
+                <HomeIcon className="h-24 w-24 text-gray-300" />
+              ) : (
+                <Users className="h-24 w-24 text-gray-300" />
+              )}
             </div>
             <h2 className="text-2xl font-bold mb-2 text-gray-800">No listings yet</h2>
             <p className="text-gray-600 mb-6">
@@ -120,8 +125,9 @@ export default function HomePage() {
             </p>
             <Link 
               href="/create-listing" 
-              className="inline-block bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl"
             >
+              <Plus className="h-5 w-5" />
               Create Listing
             </Link>
           </div>
@@ -149,29 +155,29 @@ export default function HomePage() {
                       )}
                       
                       {/* Owner Profile Picture Overlay */}
-                      <div className="">
-                       
+                      <div className="absolute bottom-3 left-3">
+                        <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+                          <img 
+                            src={getProfileImage(listing.creator)}
+                            alt={listing.creator.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       </div>
                     </>
                   ) : (
                     // Show user profile pic for "I Have a Place" (buyer listings)
-                    <>
-                      {listing.creator.profilePicture ? (
-                        <img 
-                          src={listing.creator.profilePicture} 
-                          alt={listing.creator.name}
-                          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-                        />
-                      ) : (
-                        <div className="w-32 h-32 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white text-5xl font-bold border-4 border-white shadow-lg">
-                          {listing.creator.name[0].toUpperCase()}
-                        </div>
-                      )}
-                    </>
+                    <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+                      <img 
+                        src={getProfileImage(listing.creator)} 
+                        alt={listing.creator.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   )}
                   
-                  {/* Badges */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                  {/* Badge - Only Property Type */}
+                  <div className="absolute top-3 right-3">
                     <span className={`px-3 py-1 text-xs rounded-full font-bold shadow-md ${
                       listing.listingType === "owner"
                         ? "bg-purple-500 text-white"
@@ -179,11 +185,6 @@ export default function HomePage() {
                     }`}>
                       {listing.propertyType}
                     </span>
-                    {listing.accommodationType && (
-                      <span className="px-3 py-1 text-xs rounded-full font-bold shadow-md bg-white text-gray-700">
-                        {listing.accommodationType === "whole-property" ? "Whole Property" : "Room"}
-                      </span>
-                    )}
                   </div>
                 </div>
                 
@@ -195,8 +196,9 @@ export default function HomePage() {
                   </div>
                   
                   {/* Location */}
-                  <div className="text-sm font-bold text-gray-700 mb-2">
-                    📍 {listing.address || `${listing.area ? listing.area + ', ' : ''}${listing.location}`}
+                  <div className="text-sm font-bold text-gray-700 mb-2 flex items-start gap-1">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>{listing.address || `${listing.area ? listing.area + ', ' : ''}${listing.location}`}</span>
                   </div>
                   
                   {/* Description */}
@@ -206,29 +208,27 @@ export default function HomePage() {
                   
                   {/* Additional Info */}
                   {listing.furnishing && (
-                    <div className="text-xs text-gray-500 mb-2">
-                      🪑 {listing.furnishing}
+                    <div className="text-xs text-gray-500 mb-2 capitalize">
+                      {listing.furnishing}
                     </div>
                   )}
                   
-                  {/* Creator Info */}
-                  <div className="pt-3 border-t border-gray-200 flex items-center gap-2">
-                    {listing.creator.profilePicture ? (
+                  {/* Posted By - Creator Info */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="text-xs text-gray-500 mb-2 font-semibold">Posted by</div>
+                    <div className="flex items-center gap-3">
                       <img 
-                        src={listing.creator.profilePicture}
+                        src={getProfileImage(listing.creator)}
                         alt={listing.creator.name}
-                        className="w-8 h-8 rounded-full object-cover border-2 border-purple-200 flex-shrink-0"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-purple-200 flex-shrink-0"
                       />
-                    ) : (
-                      <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {listing.creator.name[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-600 flex-1 min-w-0">
-                      <div className="font-bold truncate">{listing.creator.name}</div>
-                      <div className="truncate">
-                        {listing.creator.age && `${listing.creator.age}y`}
-                        {listing.creator.gender && ` • ${listing.creator.gender}`}
+                      <div className="text-xs text-gray-700 flex-1 min-w-0">
+                        <div className="font-bold truncate text-sm">{listing.creator.name}</div>
+                        <div className="truncate text-gray-500">
+                          {listing.creator.age && `${listing.creator.age}y`}
+                          {listing.creator.gender && ` • ${listing.creator.gender}`}
+                          {listing.creator.city && ` • ${listing.creator.city}`}
+                        </div>
                       </div>
                     </div>
                   </div>

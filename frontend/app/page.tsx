@@ -12,8 +12,8 @@ export default function SplashPage() {
       const token = getToken();
       
       if (token) {
-        // already logged in → dashboard
-        router.replace("/dashboard");
+        // already logged in → home
+        router.replace("/home");
       } else {
         // not logged in → login
         router.replace("/login");

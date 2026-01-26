@@ -20,14 +20,19 @@ type Message = {
 
 type MatchData = {
   _id: string;
-  sender: { _id: string; name: string; email: string; profilePicture?: string };
-  receiver: { _id: string; name: string; email: string; profilePicture?: string };
+  sender: { _id: string; name: string; email: string; profilePicture?: string; gender?: string };
+  receiver: { _id: string; name: string; email: string; profilePicture?: string; gender?: string };
   listing: { 
     _id: string;
     rent?: number;
     location?: string;
     propertyType?: string;
   };
+};
+
+const getProfileImage = (user: { profilePicture?: string; gender?: string }) => {
+  if (user.profilePicture && user.profilePicture.trim() !== "") return user.profilePicture;
+  return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
 };
 
 export default function ChatPage() {
@@ -208,17 +213,11 @@ export default function ChatPage() {
         >
           ←
         </button>
-        {otherUser.profilePicture ? (
-          <img 
-            src={otherUser.profilePicture}
-            alt={otherUser.name}
-            className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
-          />
-        ) : (
-          <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-            {otherUser.name[0].toUpperCase()}
-          </div>
-        )}
+        <img 
+          src={getProfileImage(otherUser)}
+          alt={otherUser.name}
+          className="w-10 h-10 rounded-full object-cover border-2 border-purple-200"
+        />
         <div className="flex-1">
           <div className="font-bold text-gray-800">{otherUser.name}</div>
           <div className="text-xs text-gray-500">

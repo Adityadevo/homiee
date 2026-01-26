@@ -80,6 +80,12 @@ const listingSchema = new mongoose.Schema(
       default: []
     },
     
+    // Likes - Array of user IDs who liked this listing
+    likes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
+    
     // Legacy fields for backward compatibility
     location: String,
     area: String,

@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
-import { Image as ImageIcon, MapPin, Calendar, DollarSign, Home, Users, CheckCircle } from "lucide-react";
+import { useCurrentUser } from "@/lib/useCurrentUser";
+import { Image as ImageIcon, MapPin, Calendar, DollarSign, Home, Users, CheckCircle, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Listing = {
   _id: string;
@@ -59,6 +60,7 @@ type Listing = {
   furnishing?: string;
   
   creator?: { 
+    _id?: string;
     name?: string; 
     city?: string; 
     age?: number; 
@@ -67,21 +69,45 @@ type Listing = {
   };
 };
 
+const getProfileImage = (creator?: Listing["creator"]) => {
+  if (!creator) return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
+  if (creator.profilePicture && creator.profilePicture.trim() !== "") return creator.profilePicture;
+  return "https://pixabay.com/get/gcc98e3544acdd60d2dbce22da5a8d96635dc4af2d465703464a169c3db289f7c0a3e5ce08c33c230e12ca42599157eb0.svg";
+};
+
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useCurrentUser();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [requestSent, setRequestSent] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [likingInProgress, setLikingInProgress] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"images" | "videos">("images");
   const router = useRouter();
 
   useEffect(() => {
-    apiFetch<Listing>(`/listings/${id}`)
-      .then(setListing)
+    Promise.all([
+      apiFetch<Listing>(`/listings/${id}`),
+      apiFetch<{ liked: boolean; likesCount: number }>(`/listings/${id}/like-status`).catch(() => ({ liked: false, likesCount: 0 })),
+      apiFetch<{ sent: boolean; status?: string }>(`/requests/status/${id}`).catch(() => ({ sent: false }))
+    ])
+      .then(([listingData, likeStatus, requestStatus]) => {
+        setListing(listingData);
+        setLiked(likeStatus.liked);
+        setLikesCount(likeStatus.likesCount);
+        setRequestSent(requestStatus.sent);
+      })
+      .catch((error) => {
+        console.error("Failed to load listing:", error);
+        alert("Failed to load listing details. Redirecting to home...");
+        router.push("/home");
+      })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, router]);
 
   async function handleRequest() {
     if (!listing || sendingRequest) return;
@@ -107,6 +133,28 @@ export default function ListingDetailPage() {
     }
   }
 
+  async function handleLike() {
+    if (!listing || likingInProgress) return;
+    
+    setLikingInProgress(true);
+    try {
+      const response = await apiFetch<{ liked: boolean; likesCount: number }>(`/listings/${listing._id}/like`, {
+        method: "POST"
+      });
+      
+      setLiked(response.liked);
+      setLikesCount(response.likesCount);
+      
+      if (response.liked) {
+        alert("❤️ Liked! If they like your listing too, you'll see a match!");
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to like");
+    } finally {
+      setLikingInProgress(false);
+    }
+  }
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-lg text-gray-600">Loading...</div>
@@ -121,9 +169,20 @@ export default function ListingDetailPage() {
 
   const isOwnerListing = listing.listingType === "owner";
   const displayAddress = listing.address || listing.location || "Address not specified";
+  const isOwnListing = user && listing.creator && listing.creator._id === user._id;
 
   const hasMedia = (listing.images && listing.images.length > 0) || (listing.videos && listing.videos.length > 0);
   const displayMedia = selectedTab === "images" ? listing.images : listing.videos;
+
+  const handlePrevImage = () => {
+    if (!displayMedia) return;
+    setSelectedImage((prev) => (prev === 0 ? displayMedia.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    if (!displayMedia) return;
+    setSelectedImage((prev) => (prev === displayMedia.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -159,19 +218,43 @@ export default function ListingDetailPage() {
           {/* Display current media */}
           {displayMedia && displayMedia.length > 0 && (
             <>
-              {selectedTab === "images" ? (
-                <img
-                  src={displayMedia[selectedImage]}
-                  alt="Property"
-                  className="w-full h-80 object-cover"
-                />
-              ) : (
-                <video
-                  src={displayMedia[selectedImage]}
-                  controls
-                  className="w-full h-80"
-                />
-              )}
+              <div className="relative w-full h-96 bg-black flex items-center justify-center">
+                {selectedTab === "images" ? (
+                  <img
+                    src={displayMedia[selectedImage]}
+                    alt="Property"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <video
+                    src={displayMedia[selectedImage]}
+                    controls
+                    className="max-w-full max-h-full"
+                  />
+                )}
+                
+                {/* Left Navigation Button */}
+                {displayMedia.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-6 w-6 text-gray-800" />
+                    </button>
+                    
+                    {/* Right Navigation Button */}
+                    <button
+                      onClick={handleNextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-6 w-6 text-gray-800" />
+                    </button>
+                  </>
+                )}
+              </div>
               
               {/* Navigation Dots */}
               {displayMedia.length > 1 && (
@@ -433,9 +516,10 @@ export default function ListingDetailPage() {
                       onClick={() => {
                         setSelectedTab("images");
                         setSelectedImage(index);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className={`relative aspect-square rounded-lg overflow-hidden ${
-                        index === selectedImage && selectedTab === "images" ? "ring-2 ring-purple-500" : ""
+                      className={`relative aspect-square rounded-lg overflow-hidden hover:opacity-80 transition-opacity ${
+                        index === selectedImage && selectedTab === "images" ? "ring-4 ring-purple-500" : "ring-1 ring-gray-200"
                       }`}
                     >
                       <img
@@ -460,9 +544,10 @@ export default function ListingDetailPage() {
                       onClick={() => {
                         setSelectedTab("videos");
                         setSelectedImage(index);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className={`relative aspect-square rounded-lg overflow-hidden bg-black ${
-                        index === selectedImage && selectedTab === "videos" ? "ring-2 ring-purple-500" : ""
+                      className={`relative aspect-square rounded-lg overflow-hidden bg-black hover:opacity-80 transition-opacity ${
+                        index === selectedImage && selectedTab === "videos" ? "ring-4 ring-purple-500" : "ring-1 ring-gray-200"
                       }`}
                     >
                       <video
@@ -486,17 +571,13 @@ export default function ListingDetailPage() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">Posted By</h2>
           <div className="flex items-center gap-4">
-            {listing.creator?.profilePicture ? (
+            <div className="w-16 h-16 rounded-full border-2 border-purple-200 overflow-hidden bg-white flex-shrink-0">
               <img
-                src={listing.creator.profilePicture}
-                alt={listing.creator.name || "User"}
-                className="w-16 h-16 rounded-full object-cover border-2 border-purple-200"
+                src={getProfileImage(listing.creator)}
+                alt={listing.creator?.name || "User"}
+                className="w-full h-full object-cover"
               />
-            ) : (
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-2xl text-white font-bold">
-                {listing.creator?.name?.[0]?.toUpperCase() || "?"}
-              </div>
-            )}
+            </div>
             <div>
               <div className="font-semibold text-lg text-gray-900">{listing.creator?.name || "Unknown"}</div>
               <div className="text-gray-600">
@@ -508,18 +589,44 @@ export default function ListingDetailPage() {
           </div>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={handleRequest}
-          disabled={requestSent || sendingRequest}
-          className={`w-full py-4 rounded-lg font-semibold text-lg shadow-lg transition-all ${
-            requestSent 
-              ? "bg-gray-400 cursor-not-allowed" 
-              : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl"
-          }`}
-        >
-          {sendingRequest ? "Sending..." : requestSent ? "Request Sent ✓" : "Send Request"}
-        </button>
+        {/* Action Buttons */}
+        {!isOwnListing && (
+          <div className="grid grid-cols-2 gap-3">
+            {/* Like Button */}
+            <button
+              onClick={handleLike}
+              disabled={likingInProgress}
+              className={`py-4 rounded-lg font-semibold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${
+                liked
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white"
+                  : "bg-white border-2 border-gray-300 text-gray-700 hover:border-pink-500"
+              }`}
+            >
+              <Heart className={`h-6 w-6 ${liked ? "fill-white" : ""}`} />
+              {liked ? "Liked" : "Like"}
+            </button>
+
+            {/* Request Button */}
+            <button
+              onClick={handleRequest}
+              disabled={requestSent || sendingRequest}
+              className={`py-4 rounded-lg font-semibold text-lg shadow-lg transition-all ${
+                requestSent 
+                  ? "bg-gray-400 cursor-not-allowed" 
+                  : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl"
+              }`}
+            >
+              {sendingRequest ? "Sending..." : requestSent ? "Request Sent ✓" : "Send Request"}
+            </button>
+          </div>
+        )}
+        
+        {isOwnListing && (
+          <div className="bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-300 rounded-lg p-6 text-center">
+            <p className="text-lg font-semibold text-gray-800">This is your listing</p>
+            <p className="text-sm text-gray-600 mt-1">You cannot send a request to your own listing</p>
+          </div>
+        )}
       </div>
       
       <NavBar />

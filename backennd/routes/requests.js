@@ -107,7 +107,7 @@ router.get("/sent", authRequired, async (req, res) => {
       .populate("listing", "propertyType accommodationType rent address images listingType")
       .populate({
         path: "receiver",
-        select: "name city age gender profilePicture"
+        select: "name city age gender profilePicture jobType area bio"
       })
       .sort({ createdAt: -1 });
     
@@ -162,50 +162,125 @@ router.post("/:id/status", authRequired, async (req, res) => {
   }
 });
 
+// GET /api/requests/status/:listingId - Check if request sent for a listing
+router.get("/status/:listingId", authRequired, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.listingId);
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    const request = await Request.findOne({
+      sender: req.user.id,
+      listing: req.params.listingId
+    }).select("status createdAt");
+
+    if (request) {
+      res.json({ 
+        sent: true, 
+        status: request.status,
+        createdAt: request.createdAt
+      });
+    } else {
+      res.json({ sent: false });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/requests/counts - Get notification counts
+router.get("/counts", authRequired, async (req, res) => {
+  try {
+    const pendingIncoming = await Request.countDocuments({ 
+      receiver: req.user.id,
+      status: "pending"
+    });
+    
+    res.json({ 
+      pendingIncoming
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // GET /api/requests/matches - Mutual matches
 // Match = UserA liked UserB's listing AND UserB liked UserA's listing
 router.get("/matches", authRequired, async (req, res) => {
   try {
-    // Find all my sent requests that are accepted (I requested their listings)
-    const mySentAccepted = await Request.find({
-      sender: req.user.id,
-      status: "accepted"
-    }).populate("listing receiver");
+    // Find all my listings
+    const myListings = await Listing.find({ creator: req.user.id });
+    
+    // Find all listings I liked (that have me in their likes array)
+    const likedByMe = await Listing.find({ 
+      likes: req.user.id,
+      creator: { $ne: req.user.id } // Exclude my own listings
+    }).populate("creator", "name age gender city area jobType profilePicture bio contactNumber");
 
-    // Find all my received requests that are accepted (They requested my listings)
-    const myReceivedAccepted = await Request.find({
-      receiver: req.user.id,
-      status: "accepted"
-    }).populate("listing sender");
-
-    // Find matches: where we both have accepted requests
     const matches = [];
     
-    for (const sentReq of mySentAccepted) {
-      // Check if this person also sent me an accepted request
-      const mutualMatch = myReceivedAccepted.find(
-        recReq => recReq.sender._id.toString() === sentReq.receiver._id.toString()
+    // For each listing I liked, check if that person also liked any of my listings
+    for (const theirListing of likedByMe) {
+      const theirUserId = theirListing.creator._id.toString();
+      
+      // Check if they liked any of my listings
+      const mutualLike = myListings.find(myListing => 
+        myListing.likes.some(likeUserId => likeUserId.toString() === theirUserId)
       );
       
-      if (mutualMatch) {
-        // This is a match! Get full details with contact number
-        const matchedUser = await User.findById(sentReq.receiver._id)
-          .select("name age gender city area jobType profilePicture bio contactNumber");
+      if (mutualLike) {
+        // It's a match! Both users liked each other's listings
         
-        const theirListing = sentReq.listing; // The listing I requested
-        const myListing = mutualMatch.listing; // The listing they requested
+        // Find or create a request ID for chat (use existing request if available)
+        let chatId = null;
+        const existingRequest = await Request.findOne({
+          $or: [
+            { sender: req.user.id, receiver: theirUserId },
+            { sender: theirUserId, receiver: req.user.id }
+          ]
+        });
+        
+        if (existingRequest) {
+          chatId = existingRequest._id.toString();
+        } else {
+          // Create a new request for chat purposes
+          const newRequest = await Request.create({
+            sender: req.user.id,
+            receiver: theirUserId,
+            listing: theirListing._id,
+            status: "accepted" // Auto-accept since it's a match
+          });
+          chatId = newRequest._id.toString();
+        }
 
         matches.push({
-          matchedUser,
-          theirListing,
-          myListing,
-          matchedAt: sentReq.updatedAt > mutualMatch.updatedAt ? sentReq.updatedAt : mutualMatch.updatedAt,
-          chatId: sentReq._id.toString() // Use the sent request ID for chat
+          matchedUser: theirListing.creator,
+          theirListing: {
+            _id: theirListing._id,
+            propertyType: theirListing.propertyType,
+            rent: theirListing.rent,
+            location: theirListing.location,
+            address: theirListing.address,
+            accommodationType: theirListing.accommodationType,
+            images: theirListing.images
+          },
+          myListing: {
+            _id: mutualLike._id,
+            propertyType: mutualLike.propertyType,
+            rent: mutualLike.rent,
+            location: mutualLike.location,
+            address: mutualLike.address,
+            accommodationType: mutualLike.accommodationType,
+            images: mutualLike.images
+          },
+          matchedAt: new Date(), // Use current date as match date
+          chatId
         });
       }
     }
 
-    // Sort by most recent
+    // Sort by most recent (for now all will have same date, but this allows for future enhancements)
     matches.sort((a, b) => new Date(b.matchedAt) - new Date(a.matchedAt));
 
     res.json(matches);

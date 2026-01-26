@@ -27,7 +27,7 @@ export default function LoginPage() {
         }
       );
       saveToken(data.token);
-      router.replace("/dashboard");
+      router.replace("/home");
     } catch (err: any) {
       setError(err.message || "Failed");
     } finally {
