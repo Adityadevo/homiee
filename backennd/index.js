@@ -18,20 +18,14 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc)
-    if (!origin) return callback(null, true);
-    
-    // Allow all localhost origins for development
-    if (origin.startsWith('http://localhost:')) {
-      return callback(null, true);
-    }
-    
-    // For production, you should specify exact origins
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    process.env.FRONTEND_URL
+  ],
   credentials: true
 }));
+
 app.use(express.json({ limit: "10mb" }));
 
 // Routes
@@ -65,7 +59,5 @@ const httpServer = createServer(app);
 initializeSocket(httpServer);
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`💬 Socket.io initialized`);
+  console.log(`🚀 Backend running on port ${PORT}`);
 });

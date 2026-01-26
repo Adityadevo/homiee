@@ -69,7 +69,7 @@ export default function MatchesPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Heart className="h-8 w-8 text-pink-500 fill-pink-500" />
+           
             <h1 className="text-3xl font-bold text-gray-900">Your Matches</h1>
           </div>
           <p className="text-gray-600">People who are interested in your listing and you in theirs</p>

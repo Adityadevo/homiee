@@ -156,13 +156,13 @@ export default function HomePage() {
                       
                       {/* Owner Profile Picture Overlay */}
                       <div className="absolute bottom-3 left-3">
-                        <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+                        {/* <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
                           <img 
                             src={getProfileImage(listing.creator)}
                             alt={listing.creator.name}
                             className="w-full h-full object-cover"
                           />
-                        </div>
+                        </div> */}
                       </div>
                     </>
                   ) : (
