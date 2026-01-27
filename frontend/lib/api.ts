@@ -25,8 +25,11 @@ export async function apiFetch<T = any>(
     ...(options.headers as HeadersInit | undefined)
   };
 
+  const fullUrl = `${BASE_URL}${path}`;
+  console.log(`[API] Fetching: ${options.method || 'GET'} ${fullUrl}`);
+
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await fetch(fullUrl, {
       ...options,
       headers
     });
@@ -34,6 +37,7 @@ export async function apiFetch<T = any>(
     if (!res.ok) {
       // Handle 401 - Unauthorized (token expired or invalid)
       if (res.status === 401) {
+        console.error("[API] Unauthorized - clearing token");
         clearToken();
         window.location.href = "/login";
         throw new Error("Session expired. Please login again.");
@@ -50,14 +54,21 @@ export async function apiFetch<T = any>(
         if (text) errorMessage = text;
       }
 
+      console.error(`[API] Error: ${errorMessage}`, { status: res.status, url: fullUrl });
       throw new Error(errorMessage);
     }
 
+    console.log(`[API] Success: ${options.method || 'GET'} ${fullUrl}`);
+    
     if (res.status === 204) return {} as T;
     return res.json();
   } catch (error: any) {
     // Network or fetch errors
-    console.error("API fetch error:", error);
+    console.error("[API] Fetch error:", {
+      message: error.message,
+      url: fullUrl,
+      method: options.method || 'GET'
+    });
     throw error;
   }
 }

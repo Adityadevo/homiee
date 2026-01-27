@@ -92,23 +92,54 @@ export default function ListingDetailPage() {
   const router = useRouter();
 
   useEffect(() => {
-    Promise.all([
-      apiFetch<Listing>(`/listings/${id}`),
-      apiFetch<{ liked: boolean; likesCount: number }>(`/listings/${id}/like-status`).catch(() => ({ liked: false, likesCount: 0 })),
-      apiFetch<{ sent: boolean; status?: string }>(`/requests/status/${id}`).catch(() => ({ sent: false }))
-    ])
-      .then(([listingData, likeStatus, requestStatus]) => {
+    const loadListingData = async () => {
+      try {
+        console.log(`[Listing] Loading listing ID: ${id}`);
+        
+        const [listingData, likeStatus, requestStatus] = await Promise.all([
+          apiFetch<Listing>(`/listings/${id}`),
+          apiFetch<{ liked: boolean; likesCount: number }>(`/listings/${id}/like-status`).catch((err) => {
+            console.warn("[Listing] Like status fetch failed:", err);
+            return { liked: false, likesCount: 0 };
+          }),
+          apiFetch<{ sent: boolean; status?: string }>(`/requests/status/${id}`).catch((err) => {
+            console.warn("[Listing] Request status fetch failed:", err);
+            return { sent: false };
+          })
+        ]);
+        
+        console.log("[Listing] Data loaded successfully:", {
+          listingId: listingData._id,
+          rent: listingData.rent,
+          liked: likeStatus.liked
+        });
+        
         setListing(listingData);
         setLiked(likeStatus.liked);
         setLikesCount(likeStatus.likesCount);
         setRequestSent(requestStatus.sent);
-      })
-      .catch((error) => {
-        console.error("Failed to load listing:", error);
-        alert("Failed to load listing details. Redirecting to home...");
-        router.push("/home");
-      })
-      .finally(() => setLoading(false));
+      } catch (error: any) {
+        console.error("[Listing] Failed to load listing:", {
+          error: error.message,
+          id,
+          stack: error.stack
+        });
+        
+        // Don't redirect immediately, show error
+        alert(`Failed to load listing: ${error.message || "Unknown error"}. Please try again.`);
+        
+        // Wait a bit before redirecting to allow user to see the error
+        setTimeout(() => {
+          router.push("/home");
+        }, 2000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadListingData();
+    }
   }, [id, router]);
 
   async function handleRequest() {

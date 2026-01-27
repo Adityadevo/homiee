@@ -16,31 +16,46 @@ export default function AppLayout({
   const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // First mount check
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
-    // Check authentication only on client-side after mount
+    // Only check auth after component has mounted
+    if (!hasMounted) return;
+
     const checkAuth = () => {
       const token = getToken();
       
+      console.log("[Auth Check]", { 
+        token: token ? "exists" : "missing", 
+        pathname,
+        timestamp: new Date().toISOString() 
+      });
+      
       if (!token) {
-        console.log("No token found, redirecting to login");
+        console.log("[Auth] No token, redirecting to login");
         router.replace("/login");
         setIsAuthenticated(false);
       } else {
+        console.log("[Auth] Token found, user authenticated");
         setIsAuthenticated(true);
       }
       
       setIsCheckingAuth(false);
     };
 
-    // Small delay to ensure hydration is complete
-    const timeoutId = setTimeout(checkAuth, 100);
+    // Longer delay to ensure everything is hydrated
+    const timeoutId = setTimeout(checkAuth, 200);
     
     return () => clearTimeout(timeoutId);
-  }, [router, pathname]);
+  }, [router, pathname, hasMounted]);
 
   // Show loading during auth check
-  if (isCheckingAuth) {
+  if (!hasMounted || isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
