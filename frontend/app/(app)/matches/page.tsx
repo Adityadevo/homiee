@@ -6,6 +6,8 @@ import NavBar from "@/components/Navbar";
 import Link from "next/link";
 import { MapPin, Phone, User, Briefcase, Heart, MessageCircle, HeartCrack } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type Match = {
   matchedUser: {
     _id: string;

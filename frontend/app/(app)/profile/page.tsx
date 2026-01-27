@@ -9,6 +9,8 @@ import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import Link from "next/link";
 import { Edit, Phone, MapPin, Briefcase, Save, X, FileText, Plus, LogOut } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type Listing = {
   _id: string;
   listingType: "owner" | "buyer";

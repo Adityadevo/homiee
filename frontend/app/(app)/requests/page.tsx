@@ -6,6 +6,8 @@ import NavBar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
 import { User, Briefcase, MapPin, Phone, MessageCircle, Eye, Inbox, X, Check } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type RequestItem = {
   _id: string;
   status: "pending" | "accepted" | "rejected";

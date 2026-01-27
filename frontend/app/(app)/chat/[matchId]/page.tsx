@@ -7,6 +7,8 @@ import { getSocket } from "@/lib/socket";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { getToken } from "@/lib/auth";
 
+export const dynamic = 'force-dynamic';
+
 type Message = {
   _id: string;
   matchId: string;

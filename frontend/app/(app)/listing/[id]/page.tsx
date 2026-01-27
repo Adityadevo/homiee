@@ -8,6 +8,8 @@ import NavBar from "@/components/Navbar";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 import { Image as ImageIcon, MapPin, Calendar, DollarSign, Home, Users, CheckCircle, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type Listing = {
   _id: string;
   listingType: "owner" | "buyer";

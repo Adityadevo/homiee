@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/api";
 import NavBar from "@/components/Navbar";
 import { Home as HomeIcon, Users, MapPin, Plus } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 type Listing = {
   _id: string;
   listingType: "owner" | "buyer";
