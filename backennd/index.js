@@ -16,13 +16,29 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
+// ✅ FIXED CORS (works for localhost + vercel + your custom frontend)
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    process.env.FRONTEND_URL
-  ],
+  origin: function (origin, callback) {
+    // allow requests with no origin (Postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    // allow localhost (dev)
+    if (origin.startsWith("http://localhost")) {
+      return callback(null, true);
+    }
+
+    // allow all vercel preview + prod URLs
+    if (origin.includes("vercel.app")) {
+      return callback(null, true);
+    }
+
+    // allow your main frontend from env
+    if (origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true
 }));
 
