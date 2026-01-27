@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
 
+export const dynamic = 'force-dynamic';
+
 export default function SplashPage() {
   const router = useRouter();
 
