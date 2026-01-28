@@ -54,7 +54,12 @@ export default function ProfilePage() {
         bio: (user as any).bio || "",
         profilePicture: (user as any).profilePicture || ""
       });
-      apiFetch<Listing[]>("/listings/my").then(setMyListings);
+      apiFetch<Listing[]>("/listings/my")
+        .then(setMyListings)
+        .catch((error: any) => {
+          console.error("[Profile] Failed to load listings:", error);
+          // Don't redirect, just show empty listings
+        });
     }
   }, [user]);
 

@@ -86,8 +86,13 @@ export default function RequestsPage() {
       ]);
       setIncoming(inc);
       setSent(snt);
-    } catch (error) {
-      console.error("Failed to load requests:", error);
+    } catch (error: any) {
+      console.error("[Requests] Failed to load requests:", error);
+      // If it's an auth error, let the layout handle it
+      if (error.message?.includes("Session expired") || error.message?.includes("401")) {
+        console.log("[Requests] Auth error detected");
+      }
+      // Don't redirect on other errors, just show empty state
     } finally {
       setLoading(false);
     }

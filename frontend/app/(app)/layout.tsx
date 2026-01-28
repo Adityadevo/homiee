@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getToken } from "@/lib/auth";
 import NavBar from "@/components/Navbar";
 
@@ -13,26 +13,16 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
 
-  // First mount check
+  // Check auth only once on mount
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    // Only check auth after component has mounted
-    if (!hasMounted) return;
-
     const checkAuth = () => {
       const token = getToken();
       
-      console.log("[Auth Check]", { 
-        token: token ? "exists" : "missing", 
-        pathname,
+      console.log("[Auth Check] Initial mount", { 
+        token: token ? "exists" : "missing",
         timestamp: new Date().toISOString() 
       });
       
@@ -48,14 +38,11 @@ export default function AppLayout({
       setIsCheckingAuth(false);
     };
 
-    // Longer delay to ensure everything is hydrated
-    const timeoutId = setTimeout(checkAuth, 200);
-    
-    return () => clearTimeout(timeoutId);
-  }, [router, pathname, hasMounted]);
+    checkAuth();
+  }, [router]);
 
   // Show loading during auth check
-  if (!hasMounted || isCheckingAuth) {
+  if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">

@@ -55,6 +55,10 @@ export default function MatchesPage() {
   useEffect(() => {
     apiFetch<Match[]>("/requests/matches")
       .then(setMatches)
+      .catch((error: any) => {
+        console.error("[Matches] Failed to load matches:", error);
+        // Don't redirect on error, just show empty state
+      })
       .finally(() => setLoading(false));
   }, []);
 

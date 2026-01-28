@@ -142,10 +142,15 @@ export default function ListingDetailPage() {
           stack: error.stack,
         });
 
-        // Show error to user but don't force navigation; let them decide what to do next
-        alert(
-          `Failed to load listing: ${error.message || "Unknown error"}. Please try again.`,
-        );
+        // Check if it's an auth error
+        if (error.message.includes("Session expired") || error.message.includes("401")) {
+          console.log("[Listing] Auth error detected, redirecting to login");
+          router.replace("/login");
+          return;
+        }
+
+        // Show error but stay on page - don't navigate away
+        console.error("[Listing] Non-auth error, staying on page");
       } finally {
         setLoading(false);
       }

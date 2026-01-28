@@ -89,8 +89,18 @@ export default function ChatPage() {
         // Get chat history
         const history = await apiFetch<Message[]>(`/chat/${matchId}`);
         setMessages(history);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to load chat data:", error);
+        
+        // Check if it's an auth error
+        if (error.message?.includes("Session expired") || error.message?.includes("401")) {
+          console.log("[Chat] Auth error detected, redirecting to login");
+          router.replace("/login");
+          return;
+        }
+        
+        // For other errors, go to matches page
+        console.log("[Chat] Chat data load failed, redirecting to matches");
         router.push("/matches");
       } finally {
         setLoading(false);

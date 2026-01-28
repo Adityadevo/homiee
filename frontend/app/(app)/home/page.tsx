@@ -46,7 +46,10 @@ export default function HomePage() {
         const validListings = data.filter(listing => listing.creator != null);
         setListings(validListings);
       })
-      .catch((err) => console.error("Feed error:", err))
+      .catch((err: any) => {
+        console.error("[Home] Feed error:", err);
+        // Don't redirect on error, just show empty state
+      })
       .finally(() => setLoading(false));
   }, [mode]);
 
