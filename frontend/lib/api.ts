@@ -36,15 +36,13 @@ export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  // No auth required - removed token check
-  const token = getToken(); // Still get token if exists for backend compatibility
+  const token = getToken();
 
   // use plain object so TS ko pata ho keys string-string hain
   const baseHeaders: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  // Add token if exists (for backend), but don't require it
   if (token) {
     baseHeaders["Authorization"] = `Bearer ${token}`;
   }
@@ -68,10 +66,18 @@ export async function apiFetch<T = any>(
     });
 
     if (!res.ok) {
-      // No auth redirects - just log and throw error
+      // Handle 401 - Unauthorized (token expired or invalid)
       if (res.status === 401) {
-        console.warn("[API] Unauthorized (401) - but no redirect, continuing...");
-        // Don't clear token or redirect
+        console.error("[API] Unauthorized - clearing token and reloading page");
+        clearToken();
+        
+        // Reload the page so the layout can redirect to login
+        // This prevents mid-navigation redirects
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 100);
+
+        throw new Error("Session expired. Please login again.");
       }
 
       // Try to parse JSON error message

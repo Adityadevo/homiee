@@ -139,10 +139,12 @@ export default function ListingDetailPage() {
         console.error("[Listing] Failed to load listing:", {
           error: error.message,
           id,
+          stack: error.stack,
         });
 
-        // No redirects - just show error and stay on page
-        console.log("[Listing] Error occurred, staying on page");
+        // Auth errors are handled by api.ts with page reload
+        // Just stay on page and show loading=false
+        console.error("[Listing] Error occurred, staying on page");
       } finally {
         setLoading(false);
       }

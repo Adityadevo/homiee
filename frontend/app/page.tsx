@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +10,19 @@ export default function SplashPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // No auth check - direct redirect to home
-    console.log("[Splash] Redirecting to home - no auth required");
-    router.replace("/home");
+    const checkAuth = async () => {
+      const token = getToken();
+      
+      if (token) {
+        // already logged in → home
+        router.replace("/home");
+      } else {
+        // not logged in → login
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
   }, [router]);
 
   return (
