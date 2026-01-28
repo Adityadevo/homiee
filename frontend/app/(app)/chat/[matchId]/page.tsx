@@ -92,8 +92,7 @@ export default function ChatPage() {
       } catch (error: any) {
         console.error("[Chat] Failed to load chat data:", error);
         
-        // Auth errors are handled by api.ts with page reload
-        // For other errors, stay on page showing error state
+        // No redirects - just stay on page
         console.log("[Chat] Error occurred, staying on page");
       } finally {
         setLoading(false);
