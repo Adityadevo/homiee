@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { getToken } from "@/lib/auth";
 import NavBar from "@/components/Navbar";
 
@@ -13,16 +13,25 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const hasCheckedAuth = useRef(false);
 
-  // Check auth only once on mount
+  // Check auth only once on initial mount - NOT on every route change
   useEffect(() => {
+    // Prevent multiple auth checks
+    if (hasCheckedAuth.current) {
+      console.log("[Auth Check] Skipped - already checked", { pathname });
+      return;
+    }
+
     const checkAuth = () => {
       const token = getToken();
       
-      console.log("[Auth Check] Initial mount", { 
+      console.log("[Auth Check] Initial mount ONLY", { 
         token: token ? "exists" : "missing",
+        pathname,
         timestamp: new Date().toISOString() 
       });
       
@@ -36,10 +45,12 @@ export default function AppLayout({
       }
       
       setIsCheckingAuth(false);
+      hasCheckedAuth.current = true;
     };
 
     checkAuth();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - run only once on mount!
 
   // Show loading during auth check
   if (isCheckingAuth) {

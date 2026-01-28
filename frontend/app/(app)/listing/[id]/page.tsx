@@ -142,15 +142,9 @@ export default function ListingDetailPage() {
           stack: error.stack,
         });
 
-        // Check if it's an auth error
-        if (error.message.includes("Session expired") || error.message.includes("401")) {
-          console.log("[Listing] Auth error detected, redirecting to login");
-          router.replace("/login");
-          return;
-        }
-
-        // Show error but stay on page - don't navigate away
-        console.error("[Listing] Non-auth error, staying on page");
+        // Auth errors are handled by api.ts with page reload
+        // Just stay on page and show loading=false
+        console.error("[Listing] Error occurred, staying on page");
       } finally {
         setLoading(false);
       }

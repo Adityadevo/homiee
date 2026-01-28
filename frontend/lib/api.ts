@@ -68,10 +68,15 @@ export async function apiFetch<T = any>(
     if (!res.ok) {
       // Handle 401 - Unauthorized (token expired or invalid)
       if (res.status === 401) {
-        console.error("[API] Unauthorized - clearing token");
+        console.error("[API] Unauthorized - clearing token and reloading page");
         clearToken();
+        
+        // Reload the page so the layout can redirect to login
+        // This prevents mid-navigation redirects
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 100);
 
-        // Let higher-level auth/layout logic handle redirects based on token state
         throw new Error("Session expired. Please login again.");
       }
 
